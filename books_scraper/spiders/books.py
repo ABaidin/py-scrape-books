@@ -3,6 +3,8 @@ from typing import Any
 import scrapy
 from scrapy.http import Response
 
+from books_scraper.items import BooksScraperItem
+
 
 class BooksSpider(scrapy.Spider):
     name = "books"
@@ -18,24 +20,16 @@ class BooksSpider(scrapy.Spider):
             yield response.follow(next_page, self.parse)
 
     def parse_book(self, response):
-        title = response.css("h1::text").get()
-        price = response.css("p.price_color::text").re_first(r"£\d+\.\d")
-        amount_in_stock = response.css("p.instock.availability::text").re_first(r"\d+")
-        rating_class = response.css("p.star-rating::attr(class)").get()
-        rating = self.get_rating(rating_class)
-        category = response.css("ul.breadcrumb li:nth-child(3) a::text").get()
-        description = response.css("#product_description ~ p::text").get()
-        upc = response.css("table.table.table-striped tr:nth-child(1) td::text").get()
+        item = BooksScraperItem()
+        item["title"] = response.css("h1::text").get()
+        item["price"] = response.css("p.price_color::text").re_first(r"£\d+\.\d")
+        item["amount_in_stock"] = response.css("p.instock.availability::text").re_first(r"\d+")
+        item["rating"] = self.get_rating(response.css("p.star-rating::attr(class)").get())
+        item["category"] = response.css("ul.breadcrumb li:nth-child(3) a::text").get()
+        item["description"] = response.css("#product_description ~ p::text").get()
+        item["upc"] = response.css("table.table.table-striped tr:nth-child(1) td::text").get()
 
-        yield {
-            "title": title,
-            "price": price,
-            "amount_in_stock": amount_in_stock,
-            "rating": rating,
-            "category": category,
-            "description": description,
-            "upc": upc,
-        }
+        yield item
 
     @staticmethod
     def get_rating(rating_class):
